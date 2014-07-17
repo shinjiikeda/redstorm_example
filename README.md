@@ -1,6 +1,9 @@
 redstorm sample
 =====
-
-    bundle install --binstubs --path vendor/bundel
+setup
+   
+    $ rvm install jruby
+    $ rvm use jruby
+    $ bundle install --binstubs --path vendor/bundle
 
 
