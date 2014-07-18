@@ -1,4 +1,4 @@
-redstorm sample
+redstorm example
 =====
 setup
    
