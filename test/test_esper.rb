@@ -9,8 +9,8 @@ class TestSpout < RedStorm::DSL::Spout
   on_send :emit => false, :reliable => false do 
     @count += 1
     num = rand(1000)
-    reliable_emit(@count, num) 
-    sleep 1
+    reliable_emit(@count, @count % 10, num) 
+    sleep 0.01
   end
   
   on_ack do |msg_id|
@@ -24,8 +24,9 @@ end
 
 class TestBolt < RedStorm::DSL::Bolt
   on_init do 
+    log.info("init esper start.")
     require 'java'
-  
+    
     java_import 'com.espertech.esper.client.Configuration'
     java_import 'com.espertech.esper.client.EPServiceProvider'
     java_import 'com.espertech.esper.client.EPServiceProviderManager'
@@ -50,23 +51,31 @@ class TestBolt < RedStorm::DSL::Bolt
     config = com.espertech.esper.client.Configuration.new
     
     map = java.util.HashMap.new
+    map.put("key", java.lang.String.java_class)
     map.put("val", java.lang.Long.java_class)
     config.addEventType("SampleEvent", map)
     
     @serv = EPServiceProviderManager.getDefaultProvider(config)
-    st = @serv.getEPAdministrator().createEPL("select avg(val) from SampleEvent.win:time( 60 sec ) output first every 60 sec ")
+    begin 
+      sql = "select key, avg(val) from SampleEvent.win:time( 60 sec ) group by key  output all every 60 sec"
+      st = @serv.getEPAdministrator().createEPL(sql)
     
-    listener = EsperListener.new
-    st.addListener(listener)
-
+      listener = EsperListener.new
+      st.addListener(listener)
+    rescue
+      log.error("error")
+    end
+    log.info("init esper finish.")
   end
 
   on_receive :anchor => false, :emit => false do |tuple|
     p tuple
-    log.info(tuple[0])
+    key = tuple[0]
+    val = tuple[1]
 
     event = java.util.HashMap.new
-    event.put("val", tuple[0])
+    event.put("key", key)
+    event.put("val", val)
     @serv.getEPRuntime.sendEvent(event, "SampleEvent")
     
     anchored_emit(tuple, tuple[0])
@@ -76,11 +85,11 @@ end
 
 class TestTopology < RedStorm::DSL::Topology
   spout TestSpout do
-    output_fields :num
+    output_fields :key, :val
   end
 
-  bolt TestBolt do
-    source TestSpout, :global
+  bolt TestBolt, :parallelism => 2 do
+    source TestSpout, :fields => [ :key ]
   end
 
   configure do |env|
