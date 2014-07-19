@@ -5,4 +5,5 @@ source 'https://rubygems.org'
 
 gem 'redstorm'
 gem 'jruby-memcached'
+gem 'rbtree-jruby'
 
