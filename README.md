@@ -8,4 +8,6 @@ setup
 
 run (local mode)
 
+    $ ./bin/redstorm bundle
     $ ./bin/redstorm local test.rb 
+
