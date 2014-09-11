@@ -10,7 +10,7 @@ class TestSpout < RedStorm::DSL::Spout
     @count += 1
     num = rand(1000)
     reliable_emit(@count, @count % 10, num) 
-    sleep 0.01
+    sleep 0.5
   end
   
   on_ack do |msg_id|
